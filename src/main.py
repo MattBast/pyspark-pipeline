@@ -41,8 +41,10 @@ class CheckResult(TypedDict):
 class ConstraintError(Exception):
 	"""A custom error used to report that a dataframe has failed a constraint check."""
 
+	message = ""
+
 	def __init__(self, constraint: str | None, status: str | None):
-		"""Create a constraunt error from the metadata returned from pydeequ.
+		"""Create a constraint error from the metadata returned from pydeequ.
 
 		Keyword arguments:
 		constraint -- details of what check failed
@@ -52,12 +54,12 @@ class ConstraintError(Exception):
 		self.constraint = str(constraint)
 		self.status = str(status)
 
-		message = \
+		self.message = \
 			"Constraint " + self.constraint + \
 			" returned status " + self.status + \
 			"."
 
-		super().__init__(message)
+		super().__init__(self.message)
 
 
 def main() -> None:

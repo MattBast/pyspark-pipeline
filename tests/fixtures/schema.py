@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 from typing import Generator
+from pyspark.sql.types import StructType, IntegerType, StringType, FloatType
 
 @pytest.fixture(scope="session")
 def schema_path() -> Generator[Path, None, None]:
@@ -53,7 +54,7 @@ def schema_path() -> Generator[Path, None, None]:
 
 @pytest.fixture(scope="session")
 def not_obj_json_path() -> Generator[Path, None, None]:
-    """ fixture for creating a none object json schema and returning the path"""
+    """fixture for creating a none object json schema and returning the path"""
 
     schema_path = Path("./tests/schemas/not_object.json")
 
@@ -69,3 +70,26 @@ def not_obj_json_path() -> Generator[Path, None, None]:
 
     # delete the schema file during teardown
     os.remove(schema_path)
+
+
+@pytest.fixture(scope="session")
+def titanic_schema() -> Generator[StructType, None, None]:
+    """create and return a spark schema representing the kaggle titanic dataset"""
+
+    # define the schema
+    schema = StructType() \
+        .add("PassengerId", IntegerType(), True) \
+        .add("Survived", IntegerType(), True) \
+        .add("Pclass", IntegerType(), True) \
+        .add("Name", StringType(), True) \
+        .add("Sex", StringType(), True) \
+        .add("Age", FloatType(), True) \
+        .add("Sibsp", IntegerType(), True) \
+        .add("Parch", IntegerType(), True) \
+        .add("Ticket", StringType(), True) \
+        .add("Fare", FloatType(), True) \
+        .add("Cabin", StringType(), True) \
+        .add("Embarked", StringType(), True)
+
+    # make the schema available to the tests
+    yield schema
