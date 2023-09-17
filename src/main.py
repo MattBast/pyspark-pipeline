@@ -23,7 +23,7 @@ from pyspark.errors import PySparkException # noqa: E402
 
 # deequ imports
 import pydeequ # noqa: E402
-from pydeequ.checks import Check, CheckLevel # noqa: E402
+from pydeequ.checks import Check, CheckLevel, ConstrainableDataTypes # noqa: E402
 from pydeequ.verification import VerificationSuite, VerificationResult # noqa: E402
 
 
@@ -231,17 +231,94 @@ def check_constraints(session: SparkSession, df: DataFrame) -> list[CheckResult]
 	"""
 
     # create the check object
-	check = Check(session, CheckLevel.Warning, "Review Check")
+	check = Check(session, CheckLevel.Error, "Review Check")
 
-	# perform the checks
+	# define the "PassengerId" checks
+	# the column should contain unique values, no nulls, no negative numbers 
+	# and be an integer type
+	checks = check \
+		.isUnique("PassengerId") \
+		.isComplete("PassengerId") \
+		.isNonNegative("PassengerId") \
+		.hasDataType("PassengerId", ConstrainableDataTypes.Integral)
+	
+	# define the "Name" checks
+	# the column should contain unique values and no nulls
+	checks = checks \
+		.isComplete("Name") \
+		.isUnique("Name")
+
+	# define the "Ticket" checks
+	# the column should contain no nulls
+	checks = checks \
+		.isComplete("Ticket")
+
+	# define the "Pclass" checks
+	# the column should contain no nulls, be an integer and contain only the 
+	# values 1, 2 and 3
+	checks = checks \
+		.isContainedIn("Pclass", ["1", "2", "3"]) \
+		.isComplete("Pclass") \
+		.hasDataType("Pclass", ConstrainableDataTypes.Integral)
+
+	# define the "Parch" checks
+	# the column should contain no nulls, no negative numbers and be an integer type
+	checks = checks \
+		.isComplete("Parch") \
+		.isNonNegative("Parch") \
+		.hasDataType("Parch", ConstrainableDataTypes.Integral)
+
+	# define the "Embarked" checks
+	# the column should contain no nulls and only the values S, C and Q
+	checks = checks \
+		.isContainedIn("Embarked", ["S", "C", "Q"]) \
+		.isComplete("Embarked")
+
+	# define the "Age" checks
+	# the column should contain no nulls, no negative numbers and be a float type
+	checks = checks \
+		.isComplete("Age") \
+		.isNonNegative("Age") \
+		.hasDataType("Age", ConstrainableDataTypes.Fractional)
+
+	# define the "Cabin" checks
+	# the column should contain no nulls
+	checks = checks \
+		.isComplete("Cabin")
+
+	# define the "Fare" checks
+	# the column should contain no nulls, no negative numbers and be a float type
+	checks = checks \
+		.isComplete("Fare") \
+		.isNonNegative("Fare") \
+		.hasDataType("Fare", ConstrainableDataTypes.Fractional)
+
+	# define the "Sibsp" checks
+	# the column should contain no nulls, no negative numbers and be an integer type
+	checks = checks \
+		.isComplete("SibSp") \
+		.isNonNegative("SibSp") \
+		.hasDataType("SibSp", ConstrainableDataTypes.Integral)
+
+	# define the "Survived" checks
+	# the column should contain no nulls, be an integer type and contain only the 
+	# values 0 and 1
+	checks = checks \
+		.isContainedIn("Survived", ["0", "1"]) \
+		.isComplete("Survived") \
+		.hasDataType("Survived", ConstrainableDataTypes.Integral)
+
+	# define the "Sex" checks
+	# the column should contain no nulls and only the values male and female
+	checks = checks \
+		.isContainedIn("Sex", ["male", "female"]) \
+		.isComplete("Sex")
+
+	# perform the checks on the dataframe
 	check_result = VerificationSuite(session) \
 		.onData(df) \
-		.addCheck(
-			check.isUnique("PassengerId") \
-			.isContainedIn("Survived", ["0", "1"]) \
-			.isContainedIn("Pclass", ["1", "2", "3"]) \
-			.isContainedIn("Sex", ["male", "female"])
-		).run()
+		.addCheck(checks) \
+		.run()
 
 	# parse the check results as a list of dicts
 	check_result_json: list[CheckResult] = VerificationResult\
