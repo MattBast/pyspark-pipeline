@@ -1,0 +1,4 @@
+.mypy_cache
+.pyspark_env
+.pytest_cache
+.ruff_cache
