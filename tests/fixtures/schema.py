@@ -17,7 +17,9 @@ from pyspark.sql.types import StructType, IntegerType, StringType, FloatType
 def schema_path() -> Generator[Path, None, None]:
     """ fixture for creating a json schema and returning the path"""
 
+    # define the schema files path and create its parent directory if it doesn't exist
     schema_path = Path("./tests/schemas/minimal.json")
+    schema_path.parent.mkdir(parents=True, exist_ok=True)
 
     # define the schema
     schema = {
@@ -56,7 +58,9 @@ def schema_path() -> Generator[Path, None, None]:
 def not_obj_json_path() -> Generator[Path, None, None]:
     """fixture for creating a none object json schema and returning the path"""
 
+    # define the schema files path and create its parent directory if it doesn't exist
     schema_path = Path("./tests/schemas/not_object.json")
+    schema_path.parent.mkdir(parents=True, exist_ok=True)
 
     # define the schema and convert into json
     json_schema = json.dumps("id")

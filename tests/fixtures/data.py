@@ -15,7 +15,9 @@ from typing import Generator
 def csv_path() -> Generator[Path, None, None]:
     """ fixture for creating a csv file and returning the path"""
 
+    # define the data files path and create its parent directory if it doesn't exist
     file_path = Path("./tests/data/minimal.csv")
+    file_path.parent.mkdir(parents=True, exist_ok=True)
     
     # write test data to a file
     with open(file_path, "w") as f:
