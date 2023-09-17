@@ -28,3 +28,30 @@ def csv_path() -> Generator[Path, None, None]:
 
     # delete the schema file during teardown
     os.remove(file_path)
+
+
+@pytest.fixture(scope="session")
+def write_dir_path() -> Generator[Path, None, None]:
+    """fixture for creating a directory that tests can write files to."""
+
+    # create the directory
+    dir_path = Path("./tests/write_dir")
+    dir_path.mkdir(parents=True, exist_ok=True)
+
+    # make the file available to the tests
+    yield dir_path
+
+    # delete the schema file during teardown
+    rmdir(dir_path) 
+
+
+def rmdir(directory: Path):
+    """equivalent to running the `rm -r` bash prompt."""
+
+    for item in directory.iterdir():
+        if item.is_dir():
+            rmdir(item)
+        else:
+            item.unlink()
+
+    directory.rmdir()
