@@ -128,27 +128,18 @@ def extract(
 	data_path -- a path that points at the csv file of data
 	"""
 
-	infer_schema = False
-
 	# load the datasets schema
 	match load_schema(schema_path):
+		
 		case Ok(raw_schema):
 			schema = StructType.fromJson(raw_schema)
+			read_result = read_csv(session, data_path, schema)
+
 		case Err(_e):
-			infer_schema = True
-			schema = StructType([])
-
-	# load a csv file checking the schema as the data is loaded
-	df = session \
-		.read \
-		.format("csv") \
-		.option("header","true")
-
-	# enforce schema if one could be loaded,
-	# otherwise infer schema from dataframe
-	df = df.schema(schema) if infer_schema else df.option("inferSchema", infer_schema)
-
-	return Ok(df.load(str(data_path)))
+			read_result = read_csv(session, data_path, None)
+	
+	# load a csv file into a dataframe and return the dataframe
+	return read_result
 
 
 @as_result(OSError, JSONDecodeError, TypeError)
@@ -170,6 +161,41 @@ def load_schema(schema_path: Path) -> dict[str, Any]:
 			return raw_schema
 		case _:
 			raise TypeError
+
+
+def read_csv(
+	session: SparkSession, 
+	data_path: Path,
+	schema: StructType | None
+) -> Result[DataFrame, PySparkException]:
+	"""Read the specified csv file into a Spark dataframe. Returns the dataframe.
+
+	Returns PySparkException if Spark fails to create a Dataframe
+
+	Keyword arguments:
+	session -- the apark session used to create a dataframe
+	data_path -- a path that points at the csv file of data
+	schema -- an optional pyspark schema
+	"""
+
+	# load a csv file checking the schema as the data is loaded
+	if schema:
+		return Ok(session \
+			.read \
+			.format("csv") \
+			.option("header", True) \
+			.schema(schema) \
+			.option("mode", "FAILFAST") \
+			.load(str(data_path))
+		)
+	else:
+		return Ok(session \
+			.read \
+			.format("csv") \
+			.option("header", True) \
+			.option("inferSchema", True) \
+			.load(str(data_path))
+		)
 
 
 def validate(session: SparkSession, df: DataFrame) -> Result[None, ConstraintError]:

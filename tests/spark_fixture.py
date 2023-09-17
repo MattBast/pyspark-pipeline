@@ -8,8 +8,11 @@ dataframes.
 import pytest
 
 # standard imports
+import json
 import os
 import logging
+from pathlib import Path
+from typing import Generator
 
 # pyspark imports
 os.environ["SPARK_VERSION"] = "3.3"
@@ -38,7 +41,7 @@ def spark_session() -> SparkSession:
     return session
 
 
-def quiet_py4j():
+def quiet_py4j() -> None:
     """ turn down spark logging for the test context """
 
     logger = logging.getLogger('py4j')

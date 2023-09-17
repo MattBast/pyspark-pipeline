@@ -68,7 +68,7 @@ python3 -m ruff check ./src/main.py
 ### Test
 Pytest is used to test the pipelines functionality. A fixture has been created to create a test spark session.
 ```bash
-python3 -m pytest --disable-warnings
+python3 -m pytest --no-header --disable-warnings --quiet
 ```
 
 ### Error handling
