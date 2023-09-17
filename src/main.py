@@ -10,7 +10,7 @@ import json
 from json import JSONDecodeError
 import os
 from pathlib import Path
-from typing import Any, TypedDict, List, Optional
+from typing import Any, TypedDict
 
 # custom error classes
 from result import Result, Ok, Err, as_result
@@ -27,34 +27,37 @@ from pydeequ.checks import Check, CheckLevel # noqa: E402
 from pydeequ.verification import VerificationSuite, VerificationResult # noqa: E402
 
 
-CheckResult = TypedDict('CheckResult', {
-	'check_status': str,
-	'check_level': str,
-	'constraint_status': str,
-	'check': str,
-	'constraint_message': str,
-	'constraint': str
-})
+class CheckResult(TypedDict):
+	"""An alias for the dict that is returned when pydeequ checks a constraint."""
+
+	check_status: str
+	check_level: str
+	constraint_status: str
+	check: str
+	constraint_message: str
+	constraint: str
 
 
 class ConstraintError(Exception):
-    """A custom error used to report that a dataframe has failed a constraint 
-    check.
+	"""A custom error used to report that a dataframe has failed a constraint check."""
 
-    Keyword arguments:
-    message -- developer defind message for the error
-    """
+	def __init__(self, constraint: str | None, status: str | None):
+		"""Create a constraunt error from the metadata returned from pydeequ.
 
-    def __init__(self, constraint: Optional[str], status: Optional[str]):
-        self.constraint = str(constraint)
-        self.status = str(status)
+		Keyword arguments:
+		constraint -- details of what check failed
+		status -- the status of the failed check
+		"""
 
-        message = \
-            "Constraint " + self.constraint + \
-            " returned status " + self.status + \
-            "."
+		self.constraint = str(constraint)
+		self.status = str(status)
 
-        super().__init__(message)
+		message = \
+			"Constraint " + self.constraint + \
+			" returned status " + self.status + \
+			"."
+
+		super().__init__(message)
 
 
 def main() -> None:
@@ -110,7 +113,11 @@ def start_spark() -> SparkSession:
 	return session
 
 
-def extract(session: SparkSession, schema_path: Path, data_path: Path) -> Result[DataFrame, PySparkException]:
+def extract(
+	session: SparkSession, 
+	schema_path: Path, 
+	data_path: Path
+) -> Result[DataFrame, PySparkException]:
 	"""Read the specified csv file into a Spark dataframe. Returns the dataframe.
 
 	Returns PySparkException if Spark fails to create a Dataframe
@@ -127,7 +134,7 @@ def extract(session: SparkSession, schema_path: Path, data_path: Path) -> Result
 	match load_schema(schema_path):
 		case Ok(raw_schema):
 			schema = StructType.fromJson(raw_schema)
-		case Err(e):
+		case Err(_e):
 			infer_schema = True
 			schema = StructType([])
 
@@ -137,10 +144,9 @@ def extract(session: SparkSession, schema_path: Path, data_path: Path) -> Result
 		.format("csv") \
 		.option("header","true")
 
-	if infer_schema:
-		df = df.schema(schema)
-	else:
-		df = df.option("inferSchema", infer_schema)
+	# enforce schema if one could be loaded,
+	# otherwise infer schema from dataframe
+	df = df.schema(schema) if infer_schema else df.option("inferSchema", infer_schema)
 
 	return Ok(df.load(str(data_path)))
 
@@ -188,7 +194,7 @@ def validate(session: SparkSession, df: DataFrame) -> Result[None, ConstraintErr
 
 
 @as_result(PySparkException)
-def check_constraints(session: SparkSession, df: DataFrame) -> List[CheckResult]:
+def check_constraints(session: SparkSession, df: DataFrame) -> list[CheckResult]:
 	"""Add and check data quality constraints on the specified dataframe.
 	
 	Using pydeequ to perform the checks: https://github.com/awslabs/python-deequ
@@ -212,12 +218,15 @@ def check_constraints(session: SparkSession, df: DataFrame) -> List[CheckResult]
 		).run()
 
 	# parse the check results as a list of dicts
-	check_result_json: List[CheckResult] = VerificationResult.checkResultsAsJson(session, check_result)
+	check_result_json: list[CheckResult] = VerificationResult\
+		.checkResultsAsJson(session, check_result)
 
 	return check_result_json
 
 
-def parse_check_results(check_results: List[CheckResult]) -> Result[None, ConstraintError]:
+def parse_check_results(
+	check_results: list[CheckResult]
+) -> Result[None, ConstraintError]:
 	"""Check if any of the constraints failed.
 
 	Raise a ConstraintError if a check failed.
